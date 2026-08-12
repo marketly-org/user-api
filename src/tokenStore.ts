@@ -1,7 +1,7 @@
 /**
  * Refresh token store.
  *
- * under load with a small heap), the Node.js process hits its memory limit
+ * Under load with a small heap, the Node.js process hits its memory limit
  * and gets OOMKilled by the kernel.
  *
  * The fix is one of:
@@ -16,22 +16,49 @@
 
 import { randomUUID } from 'crypto';
 
-
 interface TokenEntry {
   userId: string;
   email: string;
   expiresAt: number;
+  timeoutId: NodeJS.Timeout;
 }
+
+const MAX_TOKENS = 10000;
+const TOKEN_TTL = 7 * 24 * 60 * 60 * 1000; // 7 days in ms
 
 const refreshTokens = new Map<string, TokenEntry>();
 
+function evictOldestTokenIfNeeded() {
+  if (refreshTokens.size >= MAX_TOKENS) {
+    // Evict the oldest token (FIFO)
+    const oldestKey = refreshTokens.keys().next().value;
+    if (oldestKey) {
+      const oldestEntry = refreshTokens.get(oldestKey);
+      if (oldestEntry) {
+        clearTimeout(oldestEntry.timeoutId);
+      }
+      refreshTokens.delete(oldestKey);
+    }
+  }
+}
+
 export function issueRefreshToken(userId: string, email: string): string {
+  evictOldestTokenIfNeeded();
+
   const token = randomUUID();
+  const expiresAt = Date.now() + TOKEN_TTL;
+
+  const timeoutId = setTimeout(() => {
+    refreshTokens.delete(token);
+  }, TOKEN_TTL);
+
   refreshTokens.set(token, {
     userId,
     email,
-    expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
+    expiresAt,
+    timeoutId,
   });
+
   return token;
 }
 
@@ -41,6 +68,7 @@ export function validateRefreshToken(token: string): TokenEntry | null {
     return null;
   }
   if (entry.expiresAt < Date.now()) {
+    clearTimeout(entry.timeoutId);
     refreshTokens.delete(token);
     return null;
   }
@@ -48,6 +76,10 @@ export function validateRefreshToken(token: string): TokenEntry | null {
 }
 
 export function revokeRefreshToken(token: string): void {
+  const entry = refreshTokens.get(token);
+  if (entry) {
+    clearTimeout(entry.timeoutId);
+  }
   refreshTokens.delete(token);
 }
 
