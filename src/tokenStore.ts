@@ -25,17 +25,43 @@ interface TokenEntry {
   userId: string;
   email: string;
   expiresAt: number;
+  timeoutId: NodeJS.Timeout;
 }
 
 // BUG: unbounded Map — no eviction, no TTL cleanup.
 const refreshTokens = new Map<string, TokenEntry>();
 
+function evictOldestIfNeeded() {
+  while (refreshTokens.size >= MAX_TOKENS) {
+    // FIFO eviction: delete the first inserted token
+    const firstKey = refreshTokens.keys().next().value;
+    if (firstKey) {
+      const entry = refreshTokens.get(firstKey);
+      if (entry) {
+        clearTimeout(entry.timeoutId);
+      }
+      refreshTokens.delete(firstKey);
+    } else {
+      break;
+    }
+  }
+}
+
 export function issueRefreshToken(userId: string, email: string): string {
   const token = randomUUID();
+  const expiresAt = Date.now() + 7 * 24 * 60 * 60 * 1000; // 7 days
+
+  evictOldestIfNeeded();
+
+  const timeoutId = setTimeout(() => {
+    refreshTokens.delete(token);
+  }, expiresAt - Date.now());
+
   refreshTokens.set(token, {
     userId,
     email,
-    expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
+    expiresAt,
+    timeoutId,
   });
   return token;
 }
@@ -46,6 +72,7 @@ export function validateRefreshToken(token: string): TokenEntry | null {
     return null;
   }
   if (entry.expiresAt < Date.now()) {
+    clearTimeout(entry.timeoutId);
     refreshTokens.delete(token);
     return null;
   }
@@ -53,6 +80,10 @@ export function validateRefreshToken(token: string): TokenEntry | null {
 }
 
 export function revokeRefreshToken(token: string): void {
+  const entry = refreshTokens.get(token);
+  if (entry) {
+    clearTimeout(entry.timeoutId);
+  }
   refreshTokens.delete(token);
 }
 
