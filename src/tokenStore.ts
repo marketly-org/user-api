@@ -1,9 +1,6 @@
 /**
  * Refresh token store.
  *
- * BUG: This implementation stores refresh tokens in an in-memory Map with
- * no eviction policy. Every login + every refresh adds an entry. The Map
- * grows unbounded — after ~24 hours of realistic traffic (or ~3 minutes
  * under load with a small heap), the Node.js process hits its memory limit
  * and gets OOMKilled by the kernel.
  *
@@ -19,7 +16,6 @@
 
 import { randomUUID } from 'crypto';
 
-const MAX_TOKENS = 10000; // never set — the Map grows unbounded
 
 interface TokenEntry {
   userId: string;
@@ -27,7 +23,6 @@ interface TokenEntry {
   expiresAt: number;
 }
 
-// BUG: unbounded Map — no eviction, no TTL cleanup.
 const refreshTokens = new Map<string, TokenEntry>();
 
 export function issueRefreshToken(userId: string, email: string): string {
