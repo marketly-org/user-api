@@ -2,9 +2,19 @@
 
 import { Pool } from 'pg';
 
+/* Validate USER_DATABASE_URL; if missing or malformed, fall back to a safe default. */
+const _rawConn = process.env.USER_DATABASE_URL;
+const _connectionString = _rawConn && /^postgres(?:ql)?:\/\/.+/.test(_rawConn)
+  ? _rawConn
+  : (function () {
+      if (_rawConn) {
+        console.warn('Invalid USER_DATABASE_URL, falling back to default connection string');
+      }
+      return 'postgresql://marketly:marketly@localhost:5432/users';
+    })();
+
 const pool = new Pool({
-  connectionString: process.env.USER_DATABASE_URL ||
-    'postgresql://marketly:marketly@localhost:5432/users',
+  connectionString: _connectionString,
   max: 10,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,
