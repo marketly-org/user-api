@@ -29,7 +29,13 @@ app.post('/auth/register', async (req, res) => {
     return;
   }
 
-  const existing = await getUserByEmail(email);
+  let existing;
+  try {
+    existing = await getUserByEmail(email);
+  } catch (err) {
+    res.status(503).json({ error: 'database error', details: String(err) });
+    return;
+  }
   if (existing) {
     res.status(409).json({ error: 'email already registered' });
     return;
@@ -50,7 +56,13 @@ app.post('/auth/login', async (req, res) => {
     return;
   }
 
-  const user = await getUserByEmail(email);
+  let user;
+  try {
+    user = await getUserByEmail(email);
+  } catch (err) {
+    res.status(503).json({ error: 'database error', details: String(err) });
+    return;
+  }
   if (!user) {
     res.status(401).json({ error: 'invalid credentials' });
     return;
