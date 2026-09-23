@@ -1,17 +1,6 @@
 /**
  * Refresh token store.
  *
- * under load with a small heap), the Node.js process hits its memory limit
- * and gets OOMKilled by the kernel.
- *
- * The fix is one of:
- *   1. Add a TTL to each entry + a periodic cleanup interval.
- *   2. Use an LRU cache (e.g. lru-cache npm package) with a max size.
- *   3. Store refresh tokens in Redis (the right fix for production).
- *
- * For the minimal fix, option 1 is sufficient: set a setTimeout that
- * deletes the entry after REFRESH_EXPIRY, and cap the Map at a max size
- * (e.g. 10000 entries) with FIFO eviction.
  */
 
 import { randomUUID } from 'crypto';
@@ -52,8 +41,7 @@ export function revokeRefreshToken(token: string): void {
 }
 
 // Returns the current number of stored tokens. Used by /health for
-// observability — if this number grows monotonically, the leak is
-// active.
+// observability.
 export function tokenCount(): number {
   return refreshTokens.size;
 }
