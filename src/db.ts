@@ -3,7 +3,7 @@
 import { Pool } from 'pg';
 
 const pool = new Pool({
-  connectionString: process.env.USER_DATABASE_URL ||
+  connectionString: process.env.DATABASE_URL ||
     'postgresql://marketly:marketly@localhost:5432/users',
   max: 10,
   idleTimeoutMillis: 30000,
