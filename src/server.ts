@@ -2,7 +2,7 @@
 
 import express from 'express';
 import bcrypt from 'bcryptjs';
-import { pool, initSchema, createUser, getUserByEmail, getUserById, closePool } from './db';
+import { pool, initSchema, createUser, getUserByEmail, getUserById } from './db';
 import { signToken, signRefreshToken, verifyToken } from './jwt';
 import { issueRefreshToken, validateRefreshToken, revokeRefreshToken, tokenCount } from './tokenStore';
 
@@ -119,14 +119,20 @@ const port = parseInt(process.env.PORT || '8080', 10);
 
 async function main() {
   await initSchema();
-  app.listen(port, () => {
-    console.log(`user-api starting on :${port}`);
+  const server = app.listen(port, () => {
+  console.log(`user-api starting on :${port}`);
   });
 }
 
 process.on('SIGTERM', async () => {
-  await closePool();
-  process.exit(0);
+  console.log('Received SIGTERM, shutting down...');
+  server.close(async (err) => {
+    if (err) {
+      console.error('Error during server close:', err);
+    }
+    await pool.end();
+    process.exit(0);
+  });
 });
 
 main().catch((err) => {
