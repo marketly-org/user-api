@@ -2,9 +2,17 @@
 
 import { Pool } from 'pg';
 
+const connectionString =
+  process.env.USER_DATABASE_URL || process.env.DATABASE_URL;
+
+if (!connectionString) {
+  throw new Error(
+    'Database connection string not provided via USER_DATABASE_URL or DATABASE_URL',
+  );
+}
+
 const pool = new Pool({
-  connectionString: process.env.USER_DATABASE_URL ||
-    'postgresql://marketly:marketly@localhost:5432/users',
+  connectionString,
   max: 10,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,
