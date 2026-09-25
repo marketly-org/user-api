@@ -6,29 +6,33 @@ if (!process.env.USER_DATABASE_URL || !process.env.USER_DATABASE_URL.trim()) {
   throw new Error('USER_DATABASE_URL environment variable is required and must be non-empty');
 }
 
-let pool: Pool;
-try {
+let pool: Pool | null = null;
+
+function getPool(): Pool {
+  if (pool) return pool;
+  const connStr = process.env.USER_DATABASE_URL?.trim();
+  if (!connStr) {
+    throw new Error('USER_DATABASE_URL environment variable is required and must be non-empty');
+  }
   pool = new Pool({
-    connectionString: process.env.USER_DATABASE_URL,
+    connectionString: connStr,
     max: 10,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 2000,
   });
-} catch (err) {
-  throw new Error(`Failed to create database pool: ${err}`);
+  pool.on('error', (err) => {
+    console.error('Unexpected error on idle client', err);
+  });
+  return pool;
 }
 
-pool.on('error', (err) => {
-  console.error('Unexpected error on idle client', err);
-});
-
 export async function checkConnection(): Promise<void> {
-  const client = await pool.connect();
+  const client = await getPool().connect();
   client.release();
 }
 
 export async function initSchema(): Promise<void> {
-  await pool.query(`
+  await getPool().query(`
     CREATE TABLE IF NOT EXISTS users (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       email TEXT UNIQUE NOT NULL,
@@ -40,7 +44,7 @@ export async function initSchema(): Promise<void> {
 }
 
 export async function createUser(email: string, passwordHash: string, name: string): Promise<string> {
-  const result = await pool.query(
+  const result = await getPool().query(
     'INSERT INTO users (email, password_hash, name) VALUES ($1, $2, $3) RETURNING id',
     [email, passwordHash, name],
   );
@@ -48,7 +52,7 @@ export async function createUser(email: string, passwordHash: string, name: stri
 }
 
 export async function getUserByEmail(email: string): Promise<{ id: string; email: string; password_hash: string; name: string; created_at: Date } | null> {
-  const result = await pool.query(
+  const result = await getPool().query(
     'SELECT id, email, password_hash, name, created_at FROM users WHERE email = $1',
     [email],
   );
@@ -56,7 +60,7 @@ export async function getUserByEmail(email: string): Promise<{ id: string; email
 }
 
 export async function getUserById(id: string): Promise<{ id: string; email: string; name: string; created_at: Date } | null> {
-  const result = await pool.query(
+  const result = await getPool().query(
     'SELECT id, email, name, created_at FROM users WHERE id = $1',
     [id],
   );
@@ -64,7 +68,7 @@ export async function getUserById(id: string): Promise<{ id: string; email: stri
 }
 
 export async function closePool(): Promise<void> {
-  await pool.end();
+  await getPool().end();
 }
 
-export { pool };
+export { getPool as pool };
