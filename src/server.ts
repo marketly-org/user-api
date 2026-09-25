@@ -2,7 +2,7 @@
 
 import express from 'express';
 import bcrypt from 'bcryptjs';
-import { pool, initSchema, createUser, getUserByEmail, getUserById, closePool } from './db';
+import { pool, initSchema, checkConnection, createUser, getUserByEmail, getUserById, closePool } from './db';
 import { signToken, signRefreshToken, verifyToken } from './jwt';
 import { issueRefreshToken, validateRefreshToken, revokeRefreshToken, tokenCount } from './tokenStore';
 
@@ -118,6 +118,7 @@ app.get('/users/:id', async (req, res) => {
 const port = parseInt(process.env.PORT || '8080', 10);
 
 async function main() {
+  await checkConnection();
   await initSchema();
   app.listen(port, () => {
     console.log(`user-api starting on :${port}`);

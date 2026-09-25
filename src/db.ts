@@ -5,12 +5,27 @@ import { Pool } from 'pg';
 if (!process.env.USER_DATABASE_URL) {
   throw new Error('USER_DATABASE_URL environment variable is required');
 }
-const pool = new Pool({
-  connectionString: process.env.USER_DATABASE_URL,
-  max: 10,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
+
+let pool: Pool;
+try {
+  pool = new Pool({
+    connectionString: process.env.USER_DATABASE_URL,
+    max: 10,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 2000,
+  });
+} catch (err) {
+  throw new Error(`Failed to create database pool: ${err}`);
+}
+
+pool.on('error', (err) => {
+  console.error('Unexpected error on idle client', err);
 });
+
+export async function checkConnection(): Promise<void> {
+  const client = await pool.connect();
+  client.release();
+}
 
 export async function initSchema(): Promise<void> {
   await pool.query(`
