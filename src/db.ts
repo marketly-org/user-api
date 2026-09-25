@@ -2,8 +2,8 @@
 
 import { Pool } from 'pg';
 
-if (!process.env.USER_DATABASE_URL) {
-  throw new Error('USER_DATABASE_URL environment variable is required');
+if (!process.env.USER_DATABASE_URL || !process.env.USER_DATABASE_URL.trim()) {
+  throw new Error('USER_DATABASE_URL environment variable is required and must be non-empty');
 }
 
 let pool: Pool;
