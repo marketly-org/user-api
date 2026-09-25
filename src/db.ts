@@ -2,9 +2,11 @@
 
 import { Pool } from 'pg';
 
+if (!process.env.USER_DATABASE_URL) {
+  throw new Error('USER_DATABASE_URL environment variable is required');
+}
 const pool = new Pool({
-  connectionString: process.env.USER_DATABASE_URL ||
-    'postgresql://marketly:marketly@localhost:5432/users',
+  connectionString: process.env.USER_DATABASE_URL,
   max: 10,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,
