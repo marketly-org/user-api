@@ -71,4 +71,4 @@ export async function closePool(): Promise<void> {
   await getPool().end();
 }
 
-export { getPool as pool };
+export const pool = getPool();
