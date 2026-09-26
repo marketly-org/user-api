@@ -2,7 +2,7 @@
 
 import express from 'express';
 import bcrypt from 'bcryptjs';
-import { pool, initSchema, createUser, getUserByEmail, getUserById, closePool } from './db';
+import { pool, initSchema, createUser, getUserByEmail, getUserById } from './db';
 import { signToken, signRefreshToken, verifyToken } from './jwt';
 import { issueRefreshToken, validateRefreshToken, revokeRefreshToken, tokenCount } from './tokenStore';
 
@@ -125,7 +125,7 @@ async function main() {
 }
 
 process.on('SIGTERM', async () => {
-  await closePool();
+  await pool.end();
   process.exit(0);
 });
 
