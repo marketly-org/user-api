@@ -2,37 +2,13 @@
 
 import { Pool } from 'pg';
 
-const databaseUrl = process.env.USER_DATABASE_URL;
-if (!databaseUrl) {
-  throw new Error('USER_DATABASE_URL environment variable is required');
-}
-
-try {
-  new URL(databaseUrl);
-} catch {
-  throw new Error(`Invalid database URL: ${databaseUrl}`);
-}
-
-let pool: Pool;
-try {
-  pool = new Pool({
-    connectionString: databaseUrl,
-    max: 10,
-    idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 2000,
-  });
-} catch (err) {
-  throw new Error(`Failed to create database pool: ${err}`);
-}
-
-pool.on('error', (err) => {
-  console.error('Unexpected error on idle client', err);
+const pool = new Pool({
+  connectionString: process.env.USER_DATABASE_URL ||
+    'postgresql://marketly:marketly@localhost:5432/users',
+  max: 10,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 2000,
 });
-
-export async function checkConnection(): Promise<void> {
-  const client = await pool.connect();
-  client.release();
-}
 
 export async function initSchema(): Promise<void> {
   await pool.query(`
