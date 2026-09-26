@@ -117,16 +117,21 @@ app.get('/users/:id', async (req, res) => {
 
 const port = parseInt(process.env.PORT || '8080', 10);
 
+let serverStarted = false;
+
 async function main() {
   await checkConnection();
   await initSchema();
   app.listen(port, () => {
+    serverStarted = true;
     console.log(`user-api starting on :${port}`);
   });
 }
 
 process.on('SIGTERM', async () => {
-  await closePool();
+  if (serverStarted) {
+    await closePool();
+  }
   process.exit(0);
 });
 
