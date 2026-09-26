@@ -2,14 +2,21 @@
 
 import { Pool } from 'pg';
 
-if (!process.env.USER_DATABASE_URL) {
+const databaseUrl = process.env.USER_DATABASE_URL;
+if (!databaseUrl) {
   throw new Error('USER_DATABASE_URL environment variable is required');
+}
+
+try {
+  new URL(databaseUrl);
+} catch {
+  throw new Error(`Invalid database URL: ${databaseUrl}`);
 }
 
 let pool: Pool;
 try {
   pool = new Pool({
-    connectionString: process.env.USER_DATABASE_URL,
+    connectionString: databaseUrl,
     max: 10,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 2000,
