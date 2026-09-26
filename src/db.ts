@@ -70,7 +70,11 @@ export async function getUserById(id: string): Promise<{ id: string; email: stri
   return result.rows[0] || null;
 }
 
+let poolClosed = false;
+
 export async function closePool(): Promise<void> {
+  if (poolClosed) return;
+  poolClosed = true;
   await pool.end();
 }
 
